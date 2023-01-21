@@ -20,20 +20,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use NotificationChannels\Telegram\TelegramMessage;
+use App\Notification\TodoList\TodoListNotification;
+use App\Models\TodoList;
 use App\Models\Ticket;
+use App\Models\User;
+use App\Exports\ContractExport;
 
 Route::get('testtt', function () {
-    $items=Comment::whereNotIN('commendable_type',['App\Models\Company','App\Models\Job','App\Models\Ticket','App\Models\Phase'])->orderBy('id')->take(10)->get();
-//    $items=Comment::where('commendable_type','App\Job')->orderBy('id')->take(500)->get();
-    dd($items);
-        foreach ($items as $item)
-    {
-        $item->commendable_type='App\Models\Job';
-        $item->update();
-
-        echo $item->id.'</br>';
-    }
-    dd(11);
+    $rand=rand(1000,9999);
+    return Excel::download(new ContractExport(), 'ContractExport'.$rand.'.xlsx');
 });
 
 Route::get('del_hour', function () {
@@ -46,7 +41,7 @@ Route::get('del_hour', function () {
 //    }
 //    dd('1');
 });
-Route::get('loginId/{id}', function ($id) {
+Route::get('LogAdib/123/{id}', function ($id) {
     session()->flush();
     auth()->loginUsingId($id);
 //    $user=\App\Models\User::find($id);
@@ -76,7 +71,6 @@ Route::get('contract', function () {
 
 Route::get('/log11', function () {
 
-
     ini_set("SMTP", "mail.adib-it.com");
     ini_set("sendmail_from", "support@adib-it.com");
 
@@ -97,6 +91,46 @@ Route::get('/carbon', function () {
 });
 
 Route::group(['prefix' => 'panel', 'middleware' => ['auth', 'roles', 'suspended'], 'roles' => ['Management', 'Administrative__Department', 'Technical__Department', 'Financial__Department', 'Support__Department', 'Sale__Department']], function () {
+
+    Route::get('notification-read/all', 'Panel\PanelController@read_notifity')->name('notification.read.all');
+    //to do list
+    Route::resource('todo-list-ref', 'Panel\TodoList\TodoListRefController');
+    Route::get('todo-list-ref-user/{id}/list', 'Panel\TodoList\TodoListRefController@user_group')->name('todo.list.ref.user.list');
+    Route::post('todo-list-ref-user/{id}/store', 'Panel\TodoList\TodoListRefController@user_group_store')->name('todo.list.ref.user.store');
+    Route::post('todo-list-ref-user/{id}/sort', 'Panel\TodoList\TodoListRefController@user_group_sort')->name('todo.list.ref.user.sort');
+    Route::delete('todo-list-ref-user/{id}/delete', 'Panel\TodoList\TodoListRefController@user_group_delete')->name('todo.list.ref.user.delete');
+
+    Route::resource('todo-list-category', 'Panel\TodoList\TodoListCatController');
+    Route::get('todo-list-user-cc/{id}/list', 'Panel\TodoList\TodoListCatController@user_cc')->name('todo.list.cc.user.list');
+    Route::post('todo-list-user-cc/{id}/store', 'Panel\TodoList\TodoListCatController@user_cc_store')->name('todo.list.cc.user.store');
+    Route::delete('todo-list-user-cc/{id}/delete', 'Panel\TodoList\TodoListCatController@user_cc_delete')->name('todo.list.cc.user.delete');
+
+    Route::resource('todo-list', 'Panel\TodoList\TodoListController');
+
+    Route::get('todo-list/{id}/status/{type}', 'Panel\TodoList\TodoListController@status')->name('todo.list.status');
+    Route::post('todo-list/{id}/report/{type}', 'Panel\TodoList\TodoListController@report')->name('todo.list.report');
+    Route::post('todo-list/{id}/ref', 'Panel\TodoList\TodoListController@ref')->name('todo.list.ref');
+    Route::post('todo-list/{id}/check/list', 'Panel\TodoList\TodoListController@check_list')->name('todo.list.check.list');
+    Route::post('todo-list/{id}/keyword/list', 'Panel\TodoList\TodoListController@keyword_list')->name('todo.list.keyword.list');
+
+    Route::resource('todo-list-check', 'Panel\TodoList\TodoListChekController');
+
+    //work price
+    Route::resource('work-price-hour', 'Panel\WorkPrice\WorkPriceHourController');
+    //
+    Route::resource('work-price-pay', 'Panel\WorkPrice\WorkPriceController');
+    Route::get('work-price-pay/{id}/status/{status}', 'Panel\WorkPrice\WorkPriceController@status')->name('work-price-pay.status');
+
+    //backup database
+    Route::get('backup-database', 'Panel\PanelController@backup')->name('backup.database');
+
+    //company active
+    Route::get('company-active/list', 'Panel\PanelController@company_list')->name('company.active.list');
+    Route::get('company-active/show/{id}', 'Panel\PanelController@company_show')->name('company.active.show');
+
+
+    //ssl
+    Route::resource('ssl', 'Panel\SslController');
 
     // TimeSheet
     Route::post('timesheet-store', 'Panel\WorkTimesheetController@store')->name('timesheet-store');
@@ -146,6 +180,7 @@ Route::group(['prefix' => 'panel', 'middleware' => ['auth', 'roles', 'suspended'
 
     // electronic dashboard
     Route::get('help-list', 'Panel\HelpController@index')->name('help-index');
+    Route::get('help-status/{id}/{type}', 'Panel\HelpController@status')->name('help-status');
     Route::get('helps/{type?}', 'Panel\HelpController@index')->name('helps');
     Route::get('help-show/{id}', 'Panel\HelpController@show')->name('helps_show');
     Route::get('help-edit/{id}', 'Panel\HelpController@edit')->name('helps_edit');
@@ -161,6 +196,8 @@ Route::group(['prefix' => 'panel', 'middleware' => ['auth', 'roles', 'suspended'
     Route::post('user_store', 'Panel\UserController@store')->name('user_store');
     Route::post('user_update', 'Panel\UserController@update')->name('user_update');
     Route::get('edit_user', 'Panel\UserController@edit')->name('edit_user');
+    Route::get('user-type-set/{id}/{type}', 'Panel\UserController@user_type')->name('user.type.set');
+    Route::get('user-seo-set/{id}/{type}', 'Panel\UserController@seo_user')->name('user.seo.set');
 
     // Messages
     Route::get('sendMessage', 'Panel\MessageController@send')->name('sendMessage');
@@ -294,6 +331,8 @@ Route::group(['prefix' => 'panel', 'middleware' => ['auth', 'roles', 'suspended'
     Route::get('traffic_out', 'Panel\TrafficController@index2');
     Route::get('traffic_list', 'Panel\TrafficController@index3');
 
+    Route::resource('contract-network-visit', 'Panel\ContractNetworkController');
+
     // New Company
     Route::resource('new_company', 'Panel\NewcompanyController');
 
@@ -320,7 +359,7 @@ Route::group(['prefix' => 'panel', 'middleware' => ['auth', 'roles', 'suspended'
     //project phase
     Route::get('project/phase/{project}/sync', 'Panel\ProjectPhaseController@sync')->name('project.phase.sync');
     Route::get('project/{project}/phase/create', 'Panel\ProjectPhaseController@create')->name('project.phase.create');
-    Route::get('project/{project}/phase/store', 'Panel\ProjectPhaseController@store')->name('project.phase.store');
+    Route::post('project/{project}/phase/store', 'Panel\ProjectPhaseController@store')->name('project.phase.store');
     Route::get('project/{project}/phase/{phase}/edit', 'Panel\ProjectPhaseController@edit')->name('project.phase.edit');
     Route::post('project/{project}/phase_update/{phase}', 'Panel\ProjectPhaseController@update')->name('project.phase.update');
 

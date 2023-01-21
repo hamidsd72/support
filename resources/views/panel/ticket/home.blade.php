@@ -77,7 +77,8 @@
                     <tbody>
                     @foreach($data as $data)
                         @if($data->referred_to==auth()->user()->id)
-                            <tr style="background: {{ count($data->comments->where('confirmation',0)) ? 'antiquewhite' : '' }}"
+                            <tr @if($data->contract_true=='no') style="background: #6c000220"
+                                @else style="background: {{ count($data->comments->where('confirmation',0)) ? 'antiquewhite' : '' }}" @endif
                                 onclick="window.open('{{url("panel/ticket", $data->id)}}', '_blank');">
                                 <td>{{$data->id}}</td>
                                 <td>{{mb_substr($data->user->company__name,0,9, "utf-8")}}...</td>
@@ -98,7 +99,7 @@
                                     ({{$data->updated_at->format('H:i')}})
                                 </td>
                                 <td>@if($data->comments->count() != 0)@if(isset($data->comments->last()->user)){{$data->comments->last()->user->name}}@endif @else
-                                        کاربر @endif</td>
+                                    کاربر @endif  {{$data->contract_true=='no'?'(بدون قرارداد)':''}}</td>
                                 <td>
                                     @if(!empty($data->referred_to) && is_numeric($data->referred_to))
                                         <?php
